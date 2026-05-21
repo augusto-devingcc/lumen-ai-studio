@@ -38,13 +38,42 @@ export type ProviderName = "fal" | "replicate" | "elevenlabs" | "mock";
 
 // ---- Model catalog (what the Studio model picker offers) ----
 
+/** Brand whose logo represents a model in the picker. */
+export type BrandCompany =
+  | "anthropic"
+  | "openai"
+  | "google"
+  | "bytedance"
+  | "kuaishou"
+  | "elevenlabs";
+
+/** How a model accepts output dimensions. */
+export type AspectMode = "aspect_ratio" | "image_size" | "none";
+
 export interface ModelOption {
   id: string;
   label: string;
   type: AssetType;
-  /** Provider this model is served from. */
+  /** Provider this model is served from (all media is Fal now). */
   provider: ProviderName;
   description?: string;
+  /** Company logo to show in the picker. */
+  company?: BrandCompany;
+  /** Exact Fal endpoint slug. */
+  slug?: string;
+  /** Image-to-video slug used when an input image is provided. */
+  i2vSlug?: string;
+  /** How to send the aspect ratio for this model. */
+  aspectMode?: AspectMode;
+}
+
+/** A chat (LLM) model routed through the Vercel AI Gateway. */
+export interface ChatModel {
+  id: string;
+  label: string;
+  company: BrandCompany;
+  /** Gateway slug, e.g. "anthropic/claude-sonnet-4.6". */
+  slug: string;
 }
 
 // ---- Flows (node graph) ----

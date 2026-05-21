@@ -15,9 +15,9 @@ export const chatTools = {
     inputSchema: z.object({
       prompt: z.string().describe("A vivid, detailed description of the image to generate."),
       model: z
-        .enum(["flux-schnell", "flux-dev", "sdxl"])
+        .enum(["nano-banana-2", "nano-banana-pro", "gpt-image-2", "seedream-5"])
         .optional()
-        .describe("Image model. Defaults to flux-schnell (fastest)."),
+        .describe("Image model. Defaults to nano-banana-2."),
       aspectRatio: aspectRatio.optional().describe("Aspect ratio. Defaults to 1:1."),
     }),
   }),
@@ -26,7 +26,7 @@ export const chatTools = {
       "Generate a short video from a text prompt and add it to the Studio gallery. Use when the user wants motion, a clip, or animation.",
     inputSchema: z.object({
       prompt: z.string().describe("Description of the video content and motion."),
-      model: z.enum(["ltx-video", "kling-video"]).optional().describe("Video model."),
+      model: z.enum(["seedance-2", "kling-3", "veo-3.1"]).optional().describe("Video model. Defaults to seedance-2."),
       aspectRatio: aspectRatio.optional().describe("Aspect ratio. Defaults to 16:9."),
     }),
   }),

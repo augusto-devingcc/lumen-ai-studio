@@ -19,9 +19,9 @@ El MVP demuestra que las tres superficies se sienten **reales y conectadas**, no
 | Framework | Next.js 16 (App Router) + React 19 | Estándar Vercel, server components, streaming nativo |
 | Lenguaje | TypeScript estricto | `strict: true`, sin `any` |
 | Estilos | Tailwind v4 + shadcn/ui | Velocidad + componentes accesibles que controlamos |
-| Chat IA | Vercel AI SDK v5 (`ai`, `@ai-sdk/anthropic`) | Tool calling + streaming de primera clase |
-| Generación | Fal.ai (principal), Replicate (fallback) | Rápido y barato para prototipo |
-| Audio/voz | ElevenLabs | Calidad de TTS líder |
+| Chat IA | Vercel AI SDK v6 + **Vercel AI Gateway** (`createGateway`) | Un solo key para Claude/Gemini/GPT; tool calling + streaming |
+| Generación | **Fal.ai** (imagen, video y audio — todo) | Un solo proveedor; modelos en tendencia |
+| Keys | **BYOK** (el usuario pone sus keys en Settings) | Sin keys compartidas; se envían por header por-request |
 | Canvas | React Flow (`@xyflow/react`) | Estándar de facto para editores node-based |
 | Estado | Zustand (+ `persist`) | Simple, sin boilerplate, persistencia local trivial |
 | Persistencia | localStorage vía Zustand persist (MVP) | Sin DB hasta que haga falta — ver DECISIONS.md |
@@ -99,11 +99,12 @@ pnpm dev                     # http://localhost:3000
 **La app corre SIN keys**: el provider layer cae a un `mock` que devuelve assets de placeholder.
 Esto permite desarrollar y demostrar las tres superficies aunque falte alguna key.
 
-### Env vars (ver `.env.example`)
-- `ANTHROPIC_API_KEY` — Chat (AI SDK). Sin esto, el Chat informa que falta la key.
-- `FAL_KEY` — generación de imagen/video (principal).
-- `REPLICATE_API_TOKEN` — fallback de generación.
-- `ELEVENLABS_API_KEY` — audio/voz.
+### Keys — BYOK (no env vars)
+Las API keys NO se leen del entorno. El usuario las ingresa en la pestaña **Settings**; se guardan en
+`localStorage` (store `lumen-settings`) y se mandan por header en cada request:
+- **Vercel AI Gateway key** → Chat (Claude / Gemini / GPT, todo por el gateway). Header `x-ai-gateway-key`.
+- **Fal.ai key** → imagen / video / audio. Header `x-fal-key`.
+Sin key → modo mock. Única env opcional: `LUMEN_FORCE_MOCK=1`.
 
 ## 8. Flujo de trabajo del equipo
 

@@ -14,7 +14,7 @@ import {
 } from "@xyflow/react";
 import type { AssetType, FlowNodeData, FlowNodeKind } from "@/lib/types";
 import { callGenerate } from "./studio-store";
-import { VOICES } from "@/lib/providers/models";
+import { VOICES, defaultModelFor } from "@/lib/providers/models";
 
 export type FlowNode = Node<FlowNodeData>;
 
@@ -37,9 +37,9 @@ function defaultsFor(kind: FlowNodeKind): FlowNodeData {
     case "prompt":
       return { kind, label: "Prompt", text: "", status: "idle" };
     case "image":
-      return { kind, label: "Image", model: "flux-schnell", aspectRatio: "1:1", status: "idle" };
+      return { kind, label: "Image", model: defaultModelFor("image"), aspectRatio: "1:1", status: "idle" };
     case "video":
-      return { kind, label: "Video", model: "ltx-video", aspectRatio: "16:9", status: "idle" };
+      return { kind, label: "Video", model: defaultModelFor("video"), aspectRatio: "16:9", status: "idle" };
     case "audio":
       return { kind, label: "Audio", voice: VOICES[0]?.value, status: "idle" };
     case "output":
@@ -305,7 +305,7 @@ export const useFlowsStore = create<FlowsState>()(
               }
               const r = await callGenerate({
                 type: "image",
-                model: d.model ?? "flux-schnell",
+                model: d.model ?? defaultModelFor("image"),
                 prompt,
                 aspectRatio: d.aspectRatio,
               });
@@ -325,7 +325,7 @@ export const useFlowsStore = create<FlowsState>()(
             } else if (d.kind === "video") {
               const r = await callGenerate({
                 type: "video",
-                model: d.model ?? "ltx-video",
+                model: d.model ?? defaultModelFor("video"),
                 prompt: prompt || "cinematic shot",
                 aspectRatio: d.aspectRatio ?? "16:9",
                 imageUrl: upstreamImage,
@@ -352,7 +352,7 @@ export const useFlowsStore = create<FlowsState>()(
               }
               const r = await callGenerate({
                 type: "audio",
-                model: "elevenlabs-tts",
+                model: defaultModelFor("audio"),
                 prompt,
                 voice: d.voice,
               });

@@ -1,114 +1,72 @@
-import { fal } from "@fal-ai/client";
-import type { Provider, GenerationRequest, GenerationResult } from "./types";
-import type { AssetType } from "@/lib/types";
-import { FAL_IMAGE_SIZE, FAL_MODEL_SLUGS, ASPECT_DIMENSIONS } from "./models";
+import { createFalClient } from "@fal-ai/client";
+import type { GenerationRequest, GenerationResult } from "./types";
+import { buildFalCall, modelById, ASPECT_DIMENSIONS } from "./models";
 import { withRetry, withTimeout, TimeoutError } from "./fetch-utils";
 
-let configured = false;
-function ensureConfigured() {
-  if (configured) return;
-  fal.config({ credentials: process.env.FAL_KEY });
-  configured = true;
-}
+// All media (image / video / audio) is served by Fal.ai with a per-request,
+// user-provided (BYOK) key. No keys are read from the environment.
 
-function isConfigured() {
-  return Boolean(process.env.FAL_KEY);
-}
-
-function supports(type: AssetType) {
-  return type === "image" || type === "video";
-}
-
-interface FalImageOutput {
+interface FalImageOut {
   images?: { url: string; width?: number; height?: number }[];
   seed?: number;
 }
-interface FalVideoOutput {
+interface FalVideoOut {
   video?: { url: string };
 }
+interface FalAudioOut {
+  audio?: { url: string };
+}
 
-async function generate(req: GenerationRequest): Promise<GenerationResult> {
-  if (!isConfigured()) {
-    return { ok: false, provider: "fal", error: "FAL_KEY missing", code: "missing_key" };
+export async function falGenerate(
+  req: GenerationRequest,
+  apiKey: string,
+): Promise<GenerationResult> {
+  const model = modelById(req.model);
+  if (!model || !model.slug) {
+    return { ok: false, provider: "fal", error: `Unknown model "${req.model}".`, code: "model_unavailable" };
   }
-  const slug = FAL_MODEL_SLUGS[req.model];
-  if (!slug) {
-    return {
-      ok: false,
-      provider: "fal",
-      error: `Model "${req.model}" is not available on Fal.`,
-      code: "model_unavailable",
-    };
-  }
-  ensureConfigured();
+
+  const { slug, input } = buildFalCall(model, {
+    prompt: req.prompt,
+    aspectRatio: req.aspectRatio,
+    imageUrl: req.imageUrl,
+    voice: req.voice,
+  });
+
+  const client = createFalClient({ credentials: apiKey });
+  const timeoutMs = req.type === "video" ? 240_000 : req.type === "audio" ? 60_000 : 90_000;
 
   try {
-    if (req.type === "image") {
-      const ar = req.aspectRatio ?? "1:1";
-      const input: Record<string, unknown> = {
-        prompt: req.prompt,
-        image_size: FAL_IMAGE_SIZE[ar],
-      };
-      if (typeof req.seed === "number") input.seed = req.seed;
+    const result = await withRetry(
+      () => withTimeout(() => client.subscribe(slug, { input }), timeoutMs),
+      { retries: req.type === "video" ? 0 : 1 },
+    );
+    const data = result.data as FalImageOut & FalVideoOut & FalAudioOut;
 
-      const result = await withRetry(
-        () => withTimeout(() => fal.subscribe(slug, { input }), 60_000),
-        { retries: 1 },
-      );
-      const data = result.data as FalImageOutput;
+    if (req.type === "image") {
       const img = data.images?.[0];
-      if (!img?.url) {
-        return { ok: false, provider: "fal", error: "Fal returned no image.", code: "provider_error" };
-      }
-      const dims = ASPECT_DIMENSIONS[ar];
+      if (!img?.url) return { ok: false, provider: "fal", error: "Fal returned no image.", code: "provider_error" };
+      const dims = ASPECT_DIMENSIONS[req.aspectRatio ?? "1:1"];
       return {
         ok: true,
         url: img.url,
         provider: "fal",
         mock: false,
-        meta: {
-          width: img.width ?? dims.w,
-          height: img.height ?? dims.h,
-          aspectRatio: ar,
-          seed: data.seed ?? req.seed,
-        },
+        meta: { width: img.width ?? dims.w, height: img.height ?? dims.h, aspectRatio: req.aspectRatio, seed: data.seed },
       };
     }
 
-    // video
-    const input: Record<string, unknown> = { prompt: req.prompt };
-    if (req.imageUrl) input.image_url = req.imageUrl;
-    const result = await withRetry(
-      () => withTimeout(() => fal.subscribe(slug, { input }), 180_000),
-      { retries: 0 },
-    );
-    const data = result.data as FalVideoOutput;
-    if (!data.video?.url) {
-      return { ok: false, provider: "fal", error: "Fal returned no video.", code: "provider_error" };
+    if (req.type === "video") {
+      if (!data.video?.url) return { ok: false, provider: "fal", error: "Fal returned no video.", code: "provider_error" };
+      return { ok: true, url: data.video.url, provider: "fal", mock: false, meta: { aspectRatio: req.aspectRatio } };
     }
-    return {
-      ok: true,
-      url: data.video.url,
-      provider: "fal",
-      mock: false,
-      meta: { aspectRatio: req.aspectRatio ?? "16:9", durationSec: req.durationSec },
-    };
+
+    if (!data.audio?.url) return { ok: false, provider: "fal", error: "Fal returned no audio.", code: "provider_error" };
+    return { ok: true, url: data.audio.url, provider: "fal", mock: false, meta: { voice: req.voice } };
   } catch (err) {
     if (err instanceof TimeoutError) {
       return { ok: false, provider: "fal", error: "Fal request timed out.", code: "timeout" };
     }
-    return {
-      ok: false,
-      provider: "fal",
-      error: "Fal request failed.",
-      code: "provider_error",
-    };
+    return { ok: false, provider: "fal", error: "Fal request failed — check your Fal key and try again.", code: "provider_error" };
   }
 }
-
-export const falProvider: Provider = {
-  name: "fal",
-  supports,
-  isConfigured,
-  generate,
-};

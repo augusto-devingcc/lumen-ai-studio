@@ -3,14 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { ArrowUp, MessagesSquare, Loader2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { ArrowUp, MessagesSquare, Loader2, AlertTriangle, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { Message } from "./message";
+import { BrandLogo } from "@/components/brand-logos";
 import { useStudioStore } from "@/lib/store/studio-store";
 import type { RunOutcome } from "@/lib/store/studio-store";
 import { useFlowsStore } from "@/lib/store/flows-store";
+import { useSettingsStore } from "@/lib/store/settings-store";
+import { CHAT_MODELS, chatModelById, defaultModelFor } from "@/lib/providers/models";
 import type { AspectRatio, AssetType } from "@/lib/types";
+
+const CHAT_MODEL_ITEMS = CHAT_MODELS.map((m) => ({ label: m.label, value: m.id }));
 
 const STORAGE_KEY = "lumen-chat";
 
@@ -30,8 +42,20 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // BYOK: inject the user's gateway key + selected model per request (read at send time).
+  const [transport] = useState(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ messages }) => ({
+          headers: { "x-ai-gateway-key": useSettingsStore.getState().gatewayKey },
+          body: { messages, model: useSettingsStore.getState().chatModel },
+        }),
+      }),
+  );
+
   const { messages, sendMessage, addToolOutput, status, error, setMessages } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     async onToolCall({ toolCall }) {
       if (toolCall.dynamic) return;
@@ -46,7 +70,7 @@ export function ChatView() {
         if (toolCall.toolName === "generate_image") {
           const outcome = await run({
             type: "image",
-            model: input.model ?? "flux-schnell",
+            model: input.model ?? defaultModelFor("image"),
             prompt: input.prompt ?? "",
             aspectRatio: input.aspectRatio,
           });
@@ -54,13 +78,13 @@ export function ChatView() {
         } else if (toolCall.toolName === "generate_video") {
           const outcome = await run({
             type: "video",
-            model: input.model ?? "ltx-video",
+            model: input.model ?? defaultModelFor("video"),
             prompt: input.prompt ?? "",
             aspectRatio: input.aspectRatio ?? "16:9",
           });
           addToolOutput({ tool: "generate_video", toolCallId: toolCall.toolCallId, output: toOutput(outcome, "video") });
         } else if (toolCall.toolName === "generate_audio") {
-          const outcome = await run({ type: "audio", model: "elevenlabs-tts", prompt: input.text ?? "" });
+          const outcome = await run({ type: "audio", model: defaultModelFor("audio"), prompt: input.text ?? "" });
           addToolOutput({ tool: "generate_audio", toolCallId: toolCall.toolCallId, output: toOutput(outcome, "audio") });
         } else if (toolCall.toolName === "create_flow") {
           const spec = toolCall.input as { prompt: string; steps: AssetType[] };
@@ -109,6 +133,11 @@ export function ChatView() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, status]);
 
+  const chatModel = useSettingsStore((s) => s.chatModel);
+  const setChatModel = useSettingsStore((s) => s.setChatModel);
+  const hasGatewayKey = useSettingsStore((s) => s.gatewayKey.trim().length > 0);
+  const currentModel = chatModelById(chatModel);
+
   const busy = status === "submitted" || status === "streaming";
 
   function submit() {
@@ -120,26 +149,53 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-5">
-        <div className="flex items-center">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-5">
+        <div className="flex items-center gap-3">
           <h1 className="text-sm font-semibold tracking-tight">Chat</h1>
-          <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
-            Direct
-          </span>
-        </div>
-        {messages.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setMessages([]);
-              localStorage.removeItem(STORAGE_KEY);
-            }}
+          <Select
+            value={chatModel}
+            onValueChange={(v) => setChatModel(String(v))}
+            items={CHAT_MODEL_ITEMS}
           >
-            New chat
-          </Button>
-        )}
+            <SelectTrigger aria-label="Model" className="h-8 gap-2">
+              <BrandLogo company={currentModel.company} className="size-3.5" />
+              <span className="text-xs">{currentModel.label}</span>
+            </SelectTrigger>
+            <SelectContent>
+              {CHAT_MODELS.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  <span className="flex items-center gap-2">
+                    <BrandLogo company={m.company} className="size-3.5" />
+                    {m.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-1">
+          {!hasGatewayKey && (
+            <Link
+              href="/settings"
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-warning hover:bg-accent/50"
+            >
+              <KeyRound className="size-3.5" /> Add key
+            </Link>
+          )}
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setMessages([]);
+                localStorage.removeItem(STORAGE_KEY);
+              }}
+            >
+              New chat
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -187,8 +243,11 @@ export function ChatView() {
           <div className="mx-auto mb-3 flex max-w-2xl items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Couldn’t reach the model. Add <span className="font-mono">ANTHROPIC_API_KEY</span> to{" "}
-              <span className="font-mono">.env.local</span> to enable Chat. (Studio works without it.)
+              Couldn’t reach the model. Add your Vercel AI Gateway key in{" "}
+              <Link href="/settings" className="font-medium underline">
+                Settings
+              </Link>{" "}
+              to enable Chat. (Studio works without it.)
             </span>
           </div>
         )}

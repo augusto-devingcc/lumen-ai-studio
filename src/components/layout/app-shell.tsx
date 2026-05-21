@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles, ImageIcon, Workflow, MessagesSquare } from "lucide-react";
+import { Sparkles, ImageIcon, Workflow, MessagesSquare, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -10,6 +10,8 @@ const NAV = [
   { href: "/flows", label: "Flows", icon: Workflow, hint: "Compose" },
   { href: "/chat", label: "Chat", icon: MessagesSquare, hint: "Direct" },
 ] as const;
+
+const SETTINGS_NAV = { href: "/settings", label: "Settings", icon: SlidersHorizontal, hint: "Keys" } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -53,8 +55,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto px-5 py-4">
-          <p className="text-xs leading-relaxed text-muted-foreground/70">
+        <div className="mt-auto px-3 py-2">
+          {(() => {
+            const { href, label, icon: Icon, hint } = SETTINGS_NAV;
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                href={href}
+                className={cn(
+                  "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                />
+                <span className="font-medium">{label}</span>
+                <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                  {hint}
+                </span>
+              </Link>
+            );
+          })()}
+          <p className="px-3 pt-3 text-xs leading-relaxed text-muted-foreground/70">
             AI media studio.
             <br />
             Image · Video · Audio.

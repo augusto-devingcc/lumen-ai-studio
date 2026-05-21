@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { modelsByType, VOICES } from "@/lib/providers/models";
+import { modelsByType, VOICES, defaultModelFor } from "@/lib/providers/models";
 import { useStudioStore } from "@/lib/store/studio-store";
 import type { AspectRatio, AssetType } from "@/lib/types";
 
@@ -41,13 +41,13 @@ export function GeneratorPanel() {
   const [activeType, setActiveType] = useState<TabType>("image");
 
   // Image state
-  const [imageModel, setImageModel] = useState<string>(IMAGE_MODELS[0]?.id ?? "flux-schnell");
+  const [imageModel, setImageModel] = useState<string>(IMAGE_MODELS[0]?.id ?? defaultModelFor("image"));
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageAspect, setImageAspect] = useState<AspectRatio>("1:1");
   const [seed, setSeed] = useState("");
 
   // Video state
-  const [videoModel, setVideoModel] = useState<string>(VIDEO_MODELS[0]?.id ?? "ltx-video");
+  const [videoModel, setVideoModel] = useState<string>(VIDEO_MODELS[0]?.id ?? defaultModelFor("video"));
   const [videoPrompt, setVideoPrompt] = useState("");
   const [videoAspect, setVideoAspect] = useState<AspectRatio>("16:9");
 
@@ -99,7 +99,7 @@ export function GeneratorPanel() {
       if (!audioPrompt.trim()) { toast.error("Write text to speak first."); return; }
       const outcome = await runGeneration({
         type: "audio",
-        model: "elevenlabs-tts",
+        model: defaultModelFor("audio"),
         prompt: audioPrompt.trim(),
         voice,
       });

@@ -82,6 +82,23 @@ cruzadas** funcionan, probadas en navegador (Chat con key real). tsc/lint/build 
 README con capturas reales + guía de deploy. **Único item abierto**: deploy a Vercel (decisión del usuario,
 queda de su lado).
 
+### 2026-05-21 · Rework — BYOK + AI Gateway + Fal-only + model picker
+A pedido del usuario:
+- **Chat por Vercel AI Gateway** (`createGateway({ apiKey })` con key BYOK por-request, no `@ai-sdk/anthropic`).
+  Selector de modelo: `anthropic/claude-sonnet-4.6`, `google/gemini-3.5-flash`, `openai/gpt-5.4-mini`
+  (slugs verificados contra `ai-gateway.vercel.sh/v1/models`). Cada modelo con su logo (`brand-logos.tsx`).
+- **Todo el media por Fal** (se quitaron Replicate y ElevenLabs como providers separados; ElevenLabs vive
+  en Fal). Catálogo con slugs e inputs verificados contra el OpenAPI de cada modelo de Fal:
+  imagen `fal-ai/nano-banana-2`, `fal-ai/nano-banana-pro`, `openai/gpt-image-2`,
+  `fal-ai/bytedance/seedream/v5/lite/text-to-image`; video `bytedance/seedance-2.0/text-to-video` (+ i2v),
+  `fal-ai/kling-video/v3/pro/text-to-video` (+ i2v), `fal-ai/veo3.1`; audio `fal-ai/elevenlabs/tts/turbo-v2.5`.
+  `buildFalCall()` arma el input por modelo (`aspect_ratio` vs `image_size` vs none; i2v con `image_url`).
+- **BYOK total, sin keys por defecto**: las keys se ingresan en la pestaña **Settings**, viven en
+  `localStorage` y se mandan por header (`x-ai-gateway-key`, `x-fal-key`). Sin key → mock. Quité la
+  dependencia de `ANTHROPIC_API_KEY`/`FAL_KEY` del entorno; ya no hace falta ninguna env var para deployar.
+- Verificado en navegador: selector con los 3 logos, Settings con ambos campos, Studio en mock con el
+  catálogo nuevo. (El chat con LLM real requiere que el usuario ponga su gateway key.)
+
 ---
 
 ## Trade-offs abiertos (decidir cuando lleguen)

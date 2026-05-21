@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { GeneratedAsset, AssetType, AspectRatio } from "@/lib/types";
 import type { GenerationResult } from "@/lib/providers/types";
+import { useSettingsStore } from "./settings-store";
 
 export interface RunGenerationInput {
   type: AssetType;
@@ -37,9 +38,13 @@ function newId() {
 
 /** Shared generation routine. Used by Studio, Chat tools, and Flows. */
 export async function callGenerate(input: RunGenerationInput): Promise<GenerationResult> {
+  const falKey = useSettingsStore.getState().falKey;
   const res = await fetch("/api/generate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(falKey ? { "x-fal-key": falKey } : {}),
+    },
     body: JSON.stringify(input),
   });
   if (!res.ok) {

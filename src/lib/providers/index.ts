@@ -1,57 +1,29 @@
-import type { GenerationRequest, GenerationResult, Provider } from "./types";
-import { falProvider } from "./fal";
-import { replicateProvider } from "./replicate";
-import { elevenlabsProvider } from "./elevenlabs";
+import type { GenerationRequest, GenerationResult } from "./types";
+import { falGenerate } from "./fal";
 import { mockProvider } from "./mock";
 
 export type { GenerationRequest, GenerationResult } from "./types";
 
-// Routing order by capability. Mock is always the last resort so the app
-// never hard-fails: fal → replicate → mock (image), fal → mock (video),
-// elevenlabs → mock (audio).
-const ROUTES: Record<GenerationRequest["type"], Provider[]> = {
-  image: [falProvider, replicateProvider],
-  video: [falProvider],
-  audio: [elevenlabsProvider],
-};
+export interface GenerateOptions {
+  /** User-provided Fal key (BYOK). Without it, generation falls back to mock. */
+  falKey?: string;
+}
 
 function forceMock() {
   return process.env.LUMEN_FORCE_MOCK === "1";
 }
 
 /**
- * Unified generation entry point. Tries configured providers in order,
- * falling back to the mock. Never throws — always returns a GenerationResult.
+ * Unified generation entry point. With a Fal key, all media (image/video/audio)
+ * is served by Fal; without a key (or when forced) it returns mock placeholders
+ * so the app is fully usable as a demo. Never throws.
  */
-export async function generate(req: GenerationRequest): Promise<GenerationResult> {
-  if (forceMock()) return mockProvider.generate(req);
-
-  const candidates = ROUTES[req.type].filter(
-    (p) => p.supports(req.type) && p.isConfigured(),
-  );
-
-  let lastError: GenerationResult | null = null;
-  for (const provider of candidates) {
-    const result = await provider.generate(req);
-    if (result.ok) return result;
-    lastError = result;
+export async function generate(
+  req: GenerationRequest,
+  opts: GenerateOptions = {},
+): Promise<GenerationResult> {
+  if (forceMock() || !opts.falKey) {
+    return mockProvider.generate(req);
   }
-
-  // Nothing configured or everything failed → mock keeps the demo alive.
-  const mocked = await mockProvider.generate(req);
-  if (mocked.ok && lastError && lastError.code !== "missing_key") {
-    // Surface that we fell back after a real failure (kept in meta-free log).
-    return mocked;
-  }
-  return mocked;
-}
-
-/** Which providers are configured right now (for UI hints / status). */
-export function providerStatus() {
-  return {
-    fal: falProvider.isConfigured(),
-    replicate: replicateProvider.isConfigured(),
-    elevenlabs: elevenlabsProvider.isConfigured(),
-    forceMock: forceMock(),
-  };
+  return falGenerate(req, opts.falKey);
 }

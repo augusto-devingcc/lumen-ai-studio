@@ -48,7 +48,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
-  const result = await generate(parsed);
+  // BYOK: the user's Fal key arrives per-request. Without it, generate() returns mock.
+  const falKey = request.headers.get("x-fal-key")?.trim() || undefined;
+
+  const result = await generate(parsed, { falKey });
   // generate() never throws; non-ok results are returned with 200 so the
   // client can render a designed error state rather than catch a network error.
   return NextResponse.json(result);

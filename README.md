@@ -4,9 +4,12 @@
 
 Lumen is an AI media-generation app with three connected surfaces:
 
-- **Studio** — generate image / video / audio from leading model APIs (Fal.ai, Replicate, ElevenLabs).
+- **Studio** — generate image / video / audio via Fal.ai (Nano Banana, GPT Image, Seedream, Seedance, Kling, Veo, ElevenLabs).
 - **Flows** — a node-based canvas to chain creative steps (prompt → image → video → audio).
-- **Chat** — a conversational interface with tool calling that generates assets and builds flows.
+- **Chat** — a tool-calling assistant (Claude / Gemini / GPT via the Vercel AI Gateway) that generates assets and builds flows.
+
+**Bring your own key.** No shared keys: users add their Vercel AI Gateway key (Chat) and Fal.ai key (media)
+in the in-app **Settings** tab. Keys live in the browser and are sent per-request — never stored server-side.
 
 Dark-first UI, single accent, built to feel between Linear and Higgsfield.
 
@@ -27,35 +30,44 @@ Dark-first UI, single accent, built to feel between Linear and Higgsfield.
 > Screenshots are running in **mock mode** (no API keys) — the gradient placeholders are the mock provider.
 > With real keys the same UI shows real model output.
 
-## Setup (3 steps)
+## Setup (2 steps)
 
 ```bash
-# 1. Install
 pnpm install
-
-# 2. Configure (optional — runs without keys in mock mode)
-cp .env.example .env.local   # add FAL_KEY / ANTHROPIC_API_KEY / ELEVENLABS_API_KEY if you have them
-
-# 3. Run
-pnpm dev                     # http://localhost:3000
+pnpm dev          # http://localhost:3000
 ```
 
-**Runs with zero keys.** Without API keys, the provider layer falls back to a `mock` that returns
-placeholder media so you can explore every surface. Add keys to `.env.local` for real generation.
+No env files. **Runs with zero keys** in mock mode (gradient placeholders). For real output, open the
+**Settings** tab and paste your keys:
+- **Vercel AI Gateway key** → Chat ([create one](https://vercel.com/dashboard/ai-gateway))
+- **Fal.ai key** → image / video / audio ([get one](https://fal.ai/dashboard/keys))
+
+## Models
+
+| Surface | Models (via the picker) |
+|---|---|
+| Chat | Claude Sonnet 4.6 · Gemini 3.5 Flash · GPT-5.4 mini — all through the Vercel AI Gateway |
+| Image | Nano Banana 2 · Nano Banana Pro · GPT Image 2 · Seedream 5 (Fal) |
+| Video | Seedance 2.0 · Kling 3.0 Pro · Veo 3.1 (Fal) |
+| Audio | ElevenLabs Turbo v2.5 (Fal) |
+
+Each model uses its real Fal slug and input schema (verified against Fal's OpenAPI).
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · shadcn/ui (base-ui) · Vercel AI SDK ·
-Fal.ai + Replicate + ElevenLabs (behind a unified provider layer) · React Flow · Zustand (persist).
+Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · shadcn/ui (base-ui) · Vercel AI SDK v6 +
+AI Gateway · Fal.ai (all media) · React Flow · Zustand (persist).
 
 ## Architecture
 
-- `src/lib/providers/` — every external call lives here behind one `generate()` interface,
-  routed `fal → replicate → mock` (image), `fal → mock` (video), `elevenlabs → mock` (audio),
-  with timeout + retry and graceful mock fallback.
-- `src/lib/store/` — one Zustand store per domain (Studio history is `lumen-studio`, persisted).
-- `src/app/api/generate` — validated server endpoint; keys never reach the client.
-- `src/components/{layout,studio,flows,chat}` — feature UI on shadcn primitives + DESIGN.md tokens.
+- **BYOK**: keys are entered in Settings, kept in `localStorage`, and sent per-request as headers
+  (`x-ai-gateway-key`, `x-fal-key`). The server reads them from the request, never from the environment.
+- `src/lib/providers/` — `generate(req, { falKey })` routes all media through Fal (`models.ts` holds the
+  catalog + per-model input builder) with timeout + retry, falling back to a `mock` when no key is set.
+- `src/app/api/chat` — `createGateway({ apiKey })` with the selected `provider/model` slug + tool calling.
+- `src/lib/store/` — one Zustand store per domain (`studio`, `flows`, `chat`, `settings`), all persisted.
+- `src/components/{layout,studio,flows,chat,settings}` — feature UI on shadcn primitives + DESIGN.md tokens;
+  `brand-logos.tsx` renders the model picker logos.
 
 See `CLAUDE.md` (team conventions), `SPEC.md` (features + acceptance criteria),
 `DESIGN.md` (design system), `PLAN.md` (roadmap), `DECISIONS.md` (architecture log).
@@ -67,17 +79,9 @@ pnpm dlx vercel            # link & deploy a preview
 pnpm dlx vercel --prod     # promote to production
 ```
 
-Set these environment variables in the Vercel project (Settings → Environment Variables) — all optional;
-anything missing falls back to mock mode, except Chat which needs `ANTHROPIC_API_KEY`:
-
-| Var | Used for |
-|---|---|
-| `ANTHROPIC_API_KEY` | Chat (AI SDK). Without it, Chat shows a "set the key" banner. |
-| `FAL_KEY` | Image / video generation (primary). |
-| `REPLICATE_API_TOKEN` | Image fallback. |
-| `ELEVENLABS_API_KEY` | Audio (TTS). |
-
-The `/api/chat` and `/api/generate` routes run on the Node.js runtime (`maxDuration` is raised for video).
+**No environment variables required** — the app is bring-your-own-key, so each visitor supplies their
+own keys in the Settings tab. The `/api/chat` and `/api/generate` routes run on the Node.js runtime
+(`maxDuration` is raised for video).
 
 ## Status
 
@@ -87,7 +91,8 @@ The `/api/chat` and `/api/generate` routes run on the Node.js runtime (`maxDurat
 | Chat — streaming + tool calling | ✅ Done & verified live (generates assets into Studio) |
 | Flows — canvas + node graph + execution | ✅ Done & verified (topological run, prompt→image→output) |
 | Cross-integration (all 4 directions) | ✅ Done & verified (Chat↔Studio, Chat→Flows, Studio↔Flows) |
-| Deploy to Vercel | ⏳ Ready to deploy — see guide above (run by the owner) |
+| BYOK + AI Gateway + model picker | ✅ Done & verified (Settings tab, logos, Fal-only media) |
+| Deploy to Vercel | ⏳ Ready to deploy — no env vars needed (run by the owner) |
 
 Roadmap and what's in/out per day: `PLAN.md`.
 
