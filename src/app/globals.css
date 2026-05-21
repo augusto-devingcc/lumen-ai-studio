@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Lumen design tokens — dark-first.
+  Single accent (electric iris). Layered neutral surfaces, low-contrast borders.
+  Edit tokens here only; components must consume them (no ad-hoc hex).
+*/
+:root {
+  color-scheme: dark;
+
+  --radius: 0.625rem;
+
+  --background: oklch(0.165 0.008 280);
+  --foreground: oklch(0.965 0.003 280);
+
+  --card: oklch(0.202 0.009 280);
+  --card-foreground: oklch(0.965 0.003 280);
+
+  --popover: oklch(0.205 0.009 280);
+  --popover-foreground: oklch(0.965 0.003 280);
+
+  --primary: oklch(0.62 0.205 286);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.255 0.01 280);
+  --secondary-foreground: oklch(0.965 0.003 280);
+
+  --muted: oklch(0.248 0.009 280);
+  --muted-foreground: oklch(0.705 0.014 280);
+
+  --accent: oklch(0.275 0.013 286);
+  --accent-foreground: oklch(0.975 0 0);
+
+  --destructive: oklch(0.62 0.21 22);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.285 0.01 280);
+  --input: oklch(0.305 0.01 280);
+  --ring: oklch(0.62 0.205 286);
+
+  /* Lumen semantic extras */
+  --surface-2: oklch(0.232 0.01 280);
+  --success: oklch(0.72 0.17 156);
+  --warning: oklch(0.79 0.15 80);
+  --running: oklch(0.7 0.16 250);
+
+  --chart-1: oklch(0.62 0.205 286);
+  --chart-2: oklch(0.7 0.16 200);
+  --chart-3: oklch(0.72 0.17 156);
+  --chart-4: oklch(0.79 0.15 80);
+  --chart-5: oklch(0.62 0.21 22);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-surface-2: var(--surface-2);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-running: var(--running);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, quiet scrollbars that match the dark surfaces */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
