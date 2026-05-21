@@ -13,14 +13,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/brand-logos";
 import { modelsByType, VOICES } from "@/lib/providers/models";
 import { useFlowsStore } from "@/lib/store/flows-store";
 import { useStudioStore } from "@/lib/store/studio-store";
 import type { AspectRatio, GeneratedAsset } from "@/lib/types";
 
 const ASPECTS: AspectRatio[] = ["1:1", "16:9", "9:16"];
-const IMAGE_ITEMS = modelsByType("image").map((m) => ({ label: m.label, value: m.id }));
-const VIDEO_ITEMS = modelsByType("video").map((m) => ({ label: m.label, value: m.id }));
+const IMAGE_MODELS = modelsByType("image");
+const VIDEO_MODELS = modelsByType("video");
+const IMAGE_ITEMS = IMAGE_MODELS.map((m) => ({ label: m.label, value: m.id }));
+const VIDEO_ITEMS = VIDEO_MODELS.map((m) => ({ label: m.label, value: m.id }));
 
 function newId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -103,12 +106,26 @@ export function NodeInspector() {
                 items={d.kind === "image" ? IMAGE_ITEMS : VIDEO_ITEMS}
               >
                 <SelectTrigger id="node-model" className="w-full">
-                  <SelectValue placeholder="Model" />
+                  {(() => {
+                    const list = d.kind === "image" ? IMAGE_MODELS : VIDEO_MODELS;
+                    const active = list.find((m) => m.id === d.model);
+                    return active ? (
+                      <span className="flex items-center gap-2">
+                        {active.company && <BrandLogo company={active.company} className="size-3.5" />}
+                        {active.label}
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="Model" />
+                    );
+                  })()}
                 </SelectTrigger>
                 <SelectContent>
-                  {(d.kind === "image" ? IMAGE_ITEMS : VIDEO_ITEMS).map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
+                  {(d.kind === "image" ? IMAGE_MODELS : VIDEO_MODELS).map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        {m.company && <BrandLogo company={m.company} className="size-3.5" />}
+                        {m.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

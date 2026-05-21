@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/brand-logos";
 import { modelsByType, VOICES, defaultModelFor } from "@/lib/providers/models";
 import { useStudioStore } from "@/lib/store/studio-store";
 import type { AspectRatio, AssetType } from "@/lib/types";
@@ -24,6 +25,7 @@ const VIDEO_ASPECTS: AspectRatio[] = ["1:1", "16:9", "9:16"];
 
 const IMAGE_MODELS = modelsByType("image");
 const VIDEO_MODELS = modelsByType("video");
+const AUDIO_MODEL = modelsByType("audio")[0];
 
 const IMAGE_MODEL_ITEMS = IMAGE_MODELS.map((m) => ({ label: m.label, value: m.id }));
 const VIDEO_MODEL_ITEMS = VIDEO_MODELS.map((m) => ({ label: m.label, value: m.id }));
@@ -155,11 +157,23 @@ export function GeneratorPanel() {
               <Label htmlFor="image-model">Model</Label>
               <Select value={imageModel} onValueChange={(v) => setImageModel(String(v))} items={IMAGE_MODEL_ITEMS}>
                 <SelectTrigger id="image-model" className="w-full">
-                  <SelectValue placeholder="Select a model" />
+                  {activeImageModel ? (
+                    <span className="flex items-center gap-2">
+                      {activeImageModel.company && <BrandLogo company={activeImageModel.company} className="size-3.5" />}
+                      {activeImageModel.label}
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select a model" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {IMAGE_MODEL_ITEMS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  {IMAGE_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        {m.company && <BrandLogo company={m.company} className="size-3.5" />}
+                        {m.label}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -232,11 +246,23 @@ export function GeneratorPanel() {
               <Label htmlFor="video-model">Model</Label>
               <Select value={videoModel} onValueChange={(v) => setVideoModel(String(v))} items={VIDEO_MODEL_ITEMS}>
                 <SelectTrigger id="video-model" className="w-full">
-                  <SelectValue placeholder="Select a model" />
+                  {activeVideoModel ? (
+                    <span className="flex items-center gap-2">
+                      {activeVideoModel.company && <BrandLogo company={activeVideoModel.company} className="size-3.5" />}
+                      {activeVideoModel.label}
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select a model" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {VIDEO_MODEL_ITEMS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  {VIDEO_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        {m.company && <BrandLogo company={m.company} className="size-3.5" />}
+                        {m.label}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -290,6 +316,14 @@ export function GeneratorPanel() {
         {/* AUDIO */}
         {activeType === "audio" && (
           <>
+            <div className="space-y-2">
+              <Label>Model</Label>
+              <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2/40 px-3 py-2 text-sm">
+                {AUDIO_MODEL?.company && <BrandLogo company={AUDIO_MODEL.company} className="size-3.5" />}
+                {AUDIO_MODEL?.label}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="audio-voice">Voice</Label>
               <Select value={voice} onValueChange={(v) => setVoice(String(v))} items={VOICE_ITEMS}>
